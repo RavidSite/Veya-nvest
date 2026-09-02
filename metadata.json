@@ -1,0 +1,6 @@
+{
+  "name": "Veyra Invest",
+  "description": "Vəsaitinizi ağıllı şəkildə idarə edin. Şəffaf və təhlükəsiz investisiya platforması.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
