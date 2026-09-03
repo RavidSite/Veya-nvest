@@ -28,6 +28,33 @@ class VeyraRepository(
         dao.getUserByPhoneOrEmail(phone, email)
     }
 
+    suspend fun getUserByEmail(email: String): UserEntity? = withContext(Dispatchers.IO) {
+        dao.getUserByEmail(email)
+    }
+
+    suspend fun registerOrLoginUserByEmail(
+        fullName: String,
+        email: String,
+        role: String = "USER"
+    ): UserEntity = withContext(Dispatchers.IO) {
+        val cleanEmail = email.trim()
+        val existing = dao.getUserByEmail(cleanEmail)
+        if (existing != null) {
+            existing
+        } else {
+            val newUser = UserEntity(
+                fullName = fullName,
+                phone = "",
+                email = cleanEmail,
+                role = role,
+                balanceCents = 0L,
+                kycStatus = "Yoxlanılmayıb"
+            )
+            val newId = dao.insertUser(newUser)
+            dao.getUserById(newId) ?: newUser.copy(id = newId)
+        }
+    }
+
     suspend fun registerOrLoginUser(
         fullName: String,
         phone: String,

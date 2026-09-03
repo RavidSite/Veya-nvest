@@ -194,42 +194,57 @@ class VeyraViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun loginWithCredentials(phoneOrEmail: String, otpOrPin: String, isGoogle: Boolean = false) {
+    fun loginWithGmail(email: String, fullNameInput: String? = null, isGoogleAccount: Boolean = false) {
         viewModelScope.launch {
-            if (isGoogle) {
-                val user = repository.registerOrLoginUser(
-                    fullName = "Google İstifadəçisi",
-                    phone = "+99450" + (1000000..9999999).random(),
-                    email = if (phoneOrEmail.contains("@")) phoneOrEmail else "investor@gmail.com"
-                )
-                setCurrentUser(user)
-                navigateTo(VeyraScreen.DASHBOARD)
+            val cleanEmail = email.trim().lowercase(Locale.ROOT)
+            if (cleanEmail.isBlank()) {
+                _uiState.update { it.copy(errorMessage = "Zəhmət olmasa Gmail ünvanınızı daxil edin.") }
+                return@launch
+            }
+            if (!cleanEmail.contains("@") || !cleanEmail.contains(".")) {
+                _uiState.update { it.copy(errorMessage = "Zəhmət olmasa düzgün Gmail ünvanı daxil edin (məs: ad.soyad@gmail.com).") }
                 return@launch
             }
 
-            if (phoneOrEmail.isBlank() || otpOrPin.isBlank()) {
-                _uiState.update { it.copy(errorMessage = "Zəhmət olmasa bütün xanaları doldurun.") }
-                return@launch
+            // Generate clean user name from input or email username
+            val resolvedName = if (!fullNameInput.isNullOrBlank()) {
+                fullNameInput.trim()
+            } else {
+                val prefix = cleanEmail.substringBefore("@")
+                prefix.replace(".", " ")
+                    .replace("_", " ")
+                    .replace("-", " ")
+                    .split(" ")
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ") { part ->
+                        part.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                    }
+                    .ifBlank { "Veyra İnvestor" }
             }
 
-            // If phone or email matches admin
-            if (phoneOrEmail.contains("admin") || phoneOrEmail == "+994501234567") {
-                val admin = repository.getUserByPhoneOrEmail("+994501234567", "admin@veyrainvest.az")
-                if (admin != null) {
-                    setCurrentUser(admin)
-                    navigateTo(VeyraScreen.ADMIN)
-                    return@launch
-                }
-            }
-
-            val user = repository.registerOrLoginUser(
-                fullName = "İnvestor İstifadəçi",
-                phone = if (phoneOrEmail.startsWith("+")) phoneOrEmail else "+994$phoneOrEmail",
-                email = if (phoneOrEmail.contains("@")) phoneOrEmail else "user_${System.currentTimeMillis().toString().takeLast(4)}@veyrainvest.az"
+            val role = if (cleanEmail == "admin@veyrainvest.az") "ADMIN" else "USER"
+            val user = repository.registerOrLoginUserByEmail(
+                fullName = resolvedName,
+                email = cleanEmail,
+                role = role
             )
             setCurrentUser(user)
-            navigateTo(VeyraScreen.DASHBOARD)
+            _uiState.update { 
+                it.copy(
+                    errorMessage = null,
+                    infoMessage = if (isGoogleAccount) "Google hesabı ilə daxil olundu: ${user.email}" else "Xoş gəldiniz, ${user.fullName}!"
+                ) 
+            }
+            if (role == "ADMIN") {
+                navigateTo(VeyraScreen.ADMIN)
+            } else {
+                navigateTo(VeyraScreen.DASHBOARD)
+            }
         }
+    }
+
+    fun loginWithCredentials(phoneOrEmail: String, otpOrPin: String, isGoogle: Boolean = false) {
+        loginWithGmail(phoneOrEmail, null, isGoogle)
     }
 
     fun logout() {

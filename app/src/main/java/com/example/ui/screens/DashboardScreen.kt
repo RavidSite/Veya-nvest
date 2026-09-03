@@ -95,9 +95,9 @@ fun DashboardScreen(
                         )
                     )
                     Text(
-                        text = "Veyra Şəxsi Kabinet",
+                        text = user.email.ifBlank { "Veyra Şəxsi Kabinet" },
                         fontSize = 12.sp,
-                        color = VeyraTextSecondary
+                        color = VeyraGoldLight.copy(alpha = 0.85f)
                     )
                 }
 

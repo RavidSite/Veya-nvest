@@ -1,10 +1,14 @@
 package com.example
 
+import android.accounts.AccountManager
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -40,6 +44,22 @@ fun VeyraInvestApp(
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedTransactionForDetail by remember { mutableStateOf<TransactionEntity?>(null) }
     var isStartupRunning by remember { mutableStateOf(true) }
+
+    // Native Google Account Picker launcher
+    val googleAccountPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val accountName = result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
+            if (!accountName.isNullOrBlank()) {
+                viewModel.loginWithGmail(accountName, null, isGoogleAccount = true)
+            } else {
+                viewModel.navigateTo(VeyraScreen.AUTH)
+            }
+        } else {
+            viewModel.navigateTo(VeyraScreen.AUTH)
+        }
+    }
 
     // Display info messages
     LaunchedEffect(uiState.infoMessage) {
@@ -127,7 +147,21 @@ fun VeyraInvestApp(
                             },
                             onLoginClick = { viewModel.navigateTo(VeyraScreen.AUTH) },
                             onGoogleLoginClick = {
-                                viewModel.loginWithCredentials("spectrav95@gmail.com", "", true)
+                                try {
+                                    val intent = AccountManager.newChooseAccountIntent(
+                                        null,
+                                        null,
+                                        arrayOf("com.google"),
+                                        false,
+                                        null,
+                                        null,
+                                        null,
+                                        null
+                                    )
+                                    googleAccountPickerLauncher.launch(intent)
+                                } catch (e: Exception) {
+                                    viewModel.navigateTo(VeyraScreen.AUTH)
+                                }
                             },
                             onProductClick = {
                                 if (uiState.currentUser != null) {
@@ -142,8 +176,8 @@ fun VeyraInvestApp(
 
                     VeyraScreen.AUTH -> {
                         AuthScreen(
-                            onLoginSuccess = { cred, otp, isGoogle ->
-                                viewModel.loginWithCredentials(cred, otp, isGoogle)
+                            onLoginSuccess = { email, fullName, isGoogle ->
+                                viewModel.loginWithGmail(email, fullName, isGoogle)
                             },
                             errorMessage = uiState.errorMessage
                         )

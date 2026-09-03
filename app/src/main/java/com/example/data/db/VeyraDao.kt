@@ -17,6 +17,9 @@ interface VeyraDao {
     @Query("SELECT * FROM users WHERE phone = :phone OR email = :email LIMIT 1")
     suspend fun getUserByPhoneOrEmail(phone: String, email: String): UserEntity?
 
+    @Query("SELECT * FROM users WHERE LOWER(email) = LOWER(:email) LIMIT 1")
+    suspend fun getUserByEmail(email: String): UserEntity?
+
     @Query("SELECT * FROM users ORDER BY registeredAtMillis DESC")
     fun getAllUsersFlow(): Flow<List<UserEntity>>
 
